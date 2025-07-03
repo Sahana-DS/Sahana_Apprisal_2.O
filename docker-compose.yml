@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: apprisal_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin234
+      POSTGRES_DB: hr_db
+    ports:
+      - "5461:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+
+  backend:
+    build: ./Backend
+    container_name: apprisal_backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: admin234
+      DB_NAME: hr_db
+      PORT: 3102
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3102:3102"
+    restart: unless-stopped
+
+  frontend:
+    build: ./Frontend
+    container_name: apprisal_frontend
+    ports:
+      - "7017:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  hr:
+    build: ./HR
+    container_name: apprisal_hr
+    ports:
+      - "7018:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
